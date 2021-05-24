@@ -1,0 +1,180 @@
+---
+title: "Pokémon-Go Stats Scraper"
+output:
+  html_document: 
+    theme: journal
+    highlight: zenburn
+---
+
+### Part 1 - Extract a list of Pokémon
+
+<br/>Before we can extract the basic stats for each Pokémon, we need to know what Pokémon there are and where we can find their corresponding details.
+
+Here, we will extract the content from the Pokémon index web-page and, for each Pokémon, identify its name and corresponding Wiki-page.
+
+**Note that a complete (and tidied) version of the code is shown at the very end.**
+
+<br/>
+In the presentation, I said that we could automate the following steps:
+
+1. Submit request to the web-server.
+2. Interpret the HTML content received.
+
+Using the `xml2` package within R, we can combine these into a single step.
+
+Specifically, the `read_html` function will submit the request and convert the response into an "in-memory object" that we can navigate in order to find the nodes that we need.
+
+We will call this function with the URL above and save the output into a suitable named `response` variable.
+  
+```{r message=FALSE, warning=FALSE}
+# Firstly... Load up any libraries that we need.
+library (dplyr)
+library (magrittr)
+library (selectr)
+library (xml2)
+
+# Define the URL where the index is located.
+url <- "https://pokemongo.fandom.com/wiki/List_of_Pok%C3%A9mon"
+
+# Submit the request and parse the response.
+response <- read_html(url)
+```
+
+<br/><br/>We can see that this is of type `xml_node` contained within a parent type of `xml_document`.
+
+```{r}
+class(response)
+```
+
+<br/><br/>During the presentation, we could see that there were a number of `div` nodes of class `pogo-list-item`.
+
+**How can we extract all of these from the `response` object above?**  
+
+<br/>Well, there are a few options available to us:
+
+* Regular expressesions
+* XPath expressions
+* CSS selectors
+
+For the truly determined reader, there is no shortage of heated discussion on the internet as to which is "King". However, these will not be discussed here!
+
+<br/>For this example I will use CSS selectors as they are the easiest to reason about for this particular example.
+
+To obtain the specific nodes we require, we need only find all `a` elements that are contained within `div` nodes of class `pogo-list-item-name` which sit at a slightly more nested level than the `pogo-list-item` discussed in the presentation.
+
+In "CSS selector speak", this is equivalent to finding nodes which satisfy the following expression `div.pogo-list-item-name > a`
+
+Passing in our `response` object above, we can do this using the `querySelectorAll` function from the `selectr` package.
+
+```{r}
+pokemon_nodes <- querySelectorAll(response, selector = "div.pogo-list-item-name > a")
+
+# We can see that it contains the following number of nodes...
+length(pokemon_nodes)
+```
+
+<br/>This is about the number we were expecting.
+
+We can look at the first 5 which were returned.
+
+```{r}
+pokemon_nodes[1:5]
+```
+
+<br/><br/>This is starting to look promising!
+
+Ideally, we would like to get all of this information into a tabular format that we can more easily work with.
+
+Specifically, a table (known as a `tibble` in "R-speak") with a column for the web-addresses and Pokémon names respectively.
+
+These are currently stored in the `href` and `title` attributes for each node that we found above within the variable `pokemon_nodes`.
+
+We can extract attributes using the `xml_attr` function from the `xml2` library.
+
+We will save this into a variable called `pokemon_data`.
+
+```{r}
+pokemon_data <-
+    tibble(
+        NAME = xml_attr(pokemon_nodes, "title"),
+        LOCATION = xml_attr(pokemon_nodes, "href")
+    )
+
+# Show the first 5 rows.
+head(pokemon_data, 5)
+```
+
+<br/><br/>However, we have a couple of problems:
+
+* Not all Pokémon (~10 cases) have a corresponding webpage; this is indicated by a `NA` value in the `LOCATION` column.
+* The locations are still relative to the base website address.
+
+We can address both of these with the following code.
+
+Note that here we are using the pipe (`%>%`) operator which allows us to more easily represent a pipeline of transformations to our `pokemon_data`.
+
+```{r}
+# We are going to overwrite the pokemon_data variable defined above.
+pokemon_data <-
+    # Take the existing data.
+    pokemon_data %>%
+    # Remove any rows which contain 'NA' values. (~10 rows)
+    na.omit() %>%
+    # Convert the relative URLs in the LOCATION column into absolute ones.
+    mutate(LOCATION = url_absolute(LOCATION, base = "https://pokemongo.fandom.com/"))
+
+# Show the first 5 rows.
+head(pokemon_data, 5)
+```
+
+<br/>
+
+### Finished code
+
+All of the code blocks above can be condensed into the following if we use the pipe operator from an earlier start-point and make some other minor simplifications.
+
+```{r message=FALSE, warning=FALSE}
+# COMPLETED CODE LISTING
+
+library (dplyr)
+library (magrittr)
+library (selectr)
+library (xml2)
+
+pokemon_nodes <-
+    read_html("https://pokemongo.fandom.com/wiki/List_of_Pok%C3%A9mon") %>%
+    querySelectorAll(selector = "div.pogo-list-item-name > a")
+
+pokemon_data <-
+    tibble(
+        NAME =
+            xml_attr(pokemon_nodes, "title"),
+        
+        LOCATION =
+            xml_attr(pokemon_nodes, "href") %>%
+            url_absolute(base = "https://pokemongo.fandom.com/")
+    ) %>%
+    na.omit()
+```
+
+<br/>
+
+The content of the `pokemon_data` variable can be found below:
+
+```{r echo=FALSE}
+DT::datatable(pokemon_data, editable = FALSE)
+```
+
+<br/>
+
+### Final thoughts
+
+Excluding the `library(...)` references at the start, we've obtained a list of all Pokémon (via `pokemon_data`) and their corresponding Wiki-pages in ~10 lines of code.
+
+**I challenge anyone to find a more elegant solution in VBA!**
+
+In part 2, we will look at extracting the required stats for the Wiki-pages identified above.
+
+```{r include=FALSE}
+saveRDS(pokemon_data, "POKEMON_DATA.RDS")
+```
