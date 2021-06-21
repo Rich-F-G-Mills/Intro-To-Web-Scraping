@@ -4,6 +4,7 @@ output:
   html_document: 
     theme: journal
     highlight: zenburn
+    mathjax: null
 ---
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
@@ -75,7 +76,7 @@ getPokemonStats <-
       # Sleep for 2 seconds.
       Sys.sleep(2L)
       
-      # This function will extract the specified stat from the response above.
+      # This helper function will extract the specified stat from the response above.
       getStat <-
           function(stat_name) {
             # Generate the CSS selector that we need for the given stat_name.
@@ -162,7 +163,7 @@ getPokemonStats <-
       # Sleep for 2 seconds.
       Sys.sleep(2L)
       
-      # This function will extract the specified stat from the response above.
+      # This helper function will extract the specified stat from the response above.
       getStat <-
           function(stat_name) {
             # Generate the CSS selector that we need for the given stat_name.

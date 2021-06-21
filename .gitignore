@@ -43,3 +43,6 @@ vignettes/*.pdf
 
 # Temporary office files
 ~$*.*
+
+# Thumbs
+Thumbs.db

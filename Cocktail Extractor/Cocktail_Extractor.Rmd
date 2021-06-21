@@ -4,6 +4,7 @@ output:
   html_document: 
     highlight: zenburn
     theme: journal
+    mathjax: null
 ---
 
 ### What do we want to accomplish?
@@ -242,3 +243,13 @@ drinks_info <-
     na.rm = TRUE
   )
 ```
+
+<br/>
+
+### Final thoughts
+
+Using the `jsonlite` package along with a smattering of others, we've created a script that will accept user input, make the necessary request, process the response and store it in a tabular format than can be further worked as necessary.
+
+I believe that this highlights just how easy it is to work with these alternate formats using readily available packages provided by the wider R eco-system.
+
+The techniques shown here could easily be extended to other services available as part of the JSON API for this cocktail website.
